@@ -1,0 +1,121 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block prices_table %}
+<style>
+    div.container {
+        max-width: 100%;
+        max-height: 88vh;
+        overflow: scroll;
+        padding-left: 0px;
+        margin-left: 0px;
+        margin-bottom: 30px;
+    }
+    thead th {
+        position: sticky;
+        top: 0;
+    }
+    tbody th {
+        position: sticky;
+        left: 0;
+    }
+    thead th:first-child {
+        left: 0;
+        z-index: 2;
+    }
+    thead th {
+        background: #FFF;
+        z-index: 1;
+    }
+    tbody th {
+        background: #FFF;
+        border-right: 1px solid #CCC;
+        box-shadow: 1px 0 0 0 #ccc;
+        margin-left: -100px;
+    }
+    thead span{
+        writing-mode: vertical-lr;
+        transform: rotate(180deg);
+        vertical-align: middle;
+    }
+    td{
+        text-align: center;
+        vertical-align: middle !important;
+    }
+</style>
+<main class="container">
+    <div style="margin-right: auto; margin-left: auto">
+        <div class="btn-group btn-group-toggle" data-toggle="buttons" style="margin-top: 15px;">
+            <label class="btn btn-info active">
+                <input type="radio" autocomplete="off" checked> Республика
+            </label>
+            <label class="btn btn-info">
+                <input type="radio" autocomplete="off" onclick="window.location=`{% url 'by_regions' %}`;"> 
+                Ҳудудлар
+            </label>
+            <label class="btn btn-info">
+                <input type="radio" autocomplete="off" onclick="window.location=`{% url 'changes' %}`;"> 
+                Ўзгаришлар
+            </label>
+        </div>
+        <div style="margin-top: 15px; font-weight: bold;">
+            <div style="float:left">
+                <span style="font-size: 20px;margin-bottom: 15px;" class='inline-block-child'>
+                    Республика бўйича ўртача нархлар
+                </span>
+                <span class='inline-block-child'>
+                    <form enctype="multipart/form-data", action="/prices/export_prices/", method="post">
+                        {% csrf_token %}
+                        <input id="download", type="hidden", name="date", value="{{ sunday }}">
+                        <input type="image" name="submit" id='download_icon' src="{% static 'prices/download.svg' %}" alt="Submit">
+                    </form> 
+                </span>
+            </div>
+            <span style="float:right;font-size: 17px;margin-bottom: 15px;">
+                <div class='inline-block-child'>
+                    <img class='ajaxProgress' src="{% static 'prices/ajax-loader.gif' %}">
+                </div>
+                <select class='inline-block-child' name="dates_choice">
+                    {% for date, date_str in sana %}
+                        <option value="{{ date }}">{{ date_str }}</option>
+                    {% endfor %}
+                </select>
+            </span>
+        </div>
+        <div class="container">
+            {{ data|safe }}
+        </div>
+        {% comment %} <div style="padding: 20px;float: right;">
+            <form enctype="multipart/form-data", action="/prices/export_prices/", method="post">
+                {% csrf_token %}
+                <input id="download", type="hidden", name="date", value="{{ sunday }}">
+                <button type="submit" class="btn btn-primary">Кўчириб олиш</button>
+            </form> 
+        </div> {% endcomment %}
+        <script>
+            $("select").change(function() {
+                var sana = $(this).val();
+                $(this).prop("disabled", true);
+                $('.ajaxProgress').show();
+                $.ajax({
+                    url: 'change_date/',
+                    data: {
+                        'date': sana,
+                    },
+                    success: function (resp) {
+                        $("table").html(resp);
+                        $("#download").val(sana);
+                        $('.ajaxProgress').hide();
+                        $("select").prop("disabled", false);
+                    },
+                    error: function(xhr, status, error) {
+                        alert(xhr.status + " Request failed!");
+                        $('.ajaxProgress').hide();
+                        $("select").prop("disabled", false);
+                    }
+                });
+            });
+        </script>
+    </div>
+</main>
+{% endblock %}

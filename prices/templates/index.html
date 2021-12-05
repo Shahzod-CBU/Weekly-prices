@@ -1,0 +1,308 @@
+{% extends 'base.html' %}
+
+{% block prices_table %}
+    <main class="container">
+    <script>
+        var weights = JSON.parse('{{ weights|safe }}');
+        var is_market = JSON.parse('{{ is_market|safe }}');
+        var market_indices = JSON.parse('{{ market_indices|safe }}');
+        var curr_prices = JSON.parse('{{ curr_prices|safe }}');
+        var old_prices = JSON.parse('{{ old_prices|safe }}');
+        var lp = JSON.parse('{{ latter_prices|safe }}');
+        var fp = JSON.parse('{{ former_prices|safe }}');
+        var g, changes;
+        // geometricMean
+        function gm(arr) {
+            let product = 1;
+            let k = 0;
+            for (let i = 0; i < arr.length; i++) {
+                if (arr[i] != null) {
+                    product = product * arr[i];
+                    k++;
+                }
+            }
+            return Math.pow(product, 1 / k);
+        }
+        //former market and supermarket, and latter ones, market weight
+        function price_change(fm, fs, lm, ls, w, goodId) {
+            let changed;
+            const len_fm = len(fm); 
+            const len_fs = len(fs); 
+            const len_lm = len(lm); 
+            const len_ls = len(ls);
+            if (len_ls != 0 & len_lm != 0) {
+                changed = (gm(lm)/gm(fm))**w * (gm(ls)/gm(fs))**(1-w);
+            } else if (len_ls == 0 & len_lm == 0) {
+                changed = 0;
+            } else if (len_ls == 0) {
+                changed = gm(lm)/gm(fm);
+            } else {
+                changed = gm(ls)/gm(fs);
+            }
+            const chan = $('tr#n_'+ goodId +' .new.detailed');
+            const txt = changed == 0 ? 'x' : ((changed-1)*100).toFixed(1);
+            chan.text(txt); //percent change
+            //change color if market numbers are not the same
+            if (len_fm + len_fs - len_lm - len_ls != 0 & changed != 0) {
+                chan.addClass('nonmatch');
+            } else {
+                chan.removeClass('nonmatch');
+            }
+        }
+        function len(array) {
+            if (array != undefined) 
+                return array.filter(x => x !== null).length;
+            else 
+                return 0;
+        }
+    </script>
+    <style>
+        #id_price{
+            width: 100px;
+        }
+        td>p{
+            margin-bottom: 0px;
+        }
+        div.container {
+            max-width: 100%;
+            height: 90vh;
+            overflow: scroll;
+            padding-left: 0px;
+            margin-left: 0px;
+        }
+        thead th {
+            position: sticky;
+            top: 0;
+        }
+        tbody th {
+            position: sticky;
+            left: 0;
+        }
+        /* thead th:first-child {
+            left: 0;
+            z-index: 2;
+        } */
+        thead th.freeze {
+            left: 0;
+            z-index: 2;
+        }
+        thead th {
+            background: #483D8B;
+            color: #FFF;
+            z-index: 1;
+            text-align: center;
+        }
+        tbody th {
+            background: #FFF;
+            border-right: 1px solid #CCC;
+            box-shadow: 1px 0 0 0 #ccc;
+            margin-left: -100px;
+        }
+        .order {
+            text-align: center;
+        }
+        table {
+            border-collapse: collapse;
+        }
+        td, th {
+            padding: 0.5em;
+        }
+        td {
+            text-align: center;
+        }
+        .title {
+            position: absolute;
+            background: silver;
+            padding: 4px;
+            left: 12px;
+            white-space: nowrap;
+            font-weight: normal;
+            font-size: 80%;
+            /* top: 70%;
+            max-width: 150%;
+            display: block;
+            word-wrap:break-word;
+            white-space: normal;
+            z-index: 5; */
+        }
+        #unsaved {
+            font-size: 18px; 
+            margin-top: 15px; 
+            font-weight: bold;
+            color:red;
+            display:none;
+        }
+        .detailed:hover{
+            cursor: pointer;
+            color: blue;
+            text-decoration: underline;
+        }
+        .nonmatch{
+            background-color: red;
+        }
+    </style>
+    <div id="unsaved">
+        Сақланмаган нархлар: <span id="fails">0</span> та
+    </div>
+    <div style="font-size: 20px; margin-top: 15px; font-weight: bold;">
+        <span style="float:left;margin-bottom: 15px">{{ region }}</span>
+        <span style="float:right;margin-bottom: 15px">{{ sunday }}</span>
+    </div>
+    <div class="container">
+        <table class="table table-bordered table-hover">
+            <thead>
+                <tr>
+                    <th class="freeze">№</th>
+                    <th class="freeze">Товар номи</th>
+                    {% for market in markets %}
+                        <th>{{ market.name }}</th>
+                    {% endfor %}
+                    <th class="freeze">Ўзгариши</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for good in goods %}
+                    <tr id="n_{{ good.id }}">
+                        <th class="new" class="order">{{ good.order }}</th>
+                        <th class="new" title="{{ good.description }}" onclick="show_title(this)">
+                            {{ good.name }}
+                        </th>
+                        {% for market in markets %}
+                            {% with count=iterator.next %}
+                                <td id="_{{ count }}">{{ my_form.as_p }}</td>
+                                <script>
+                                    var counts = "#_{{ count }} #id_price";
+                                    $(counts).attr('tabindex', {{ good.order }} + {{ forloop.counter0 }} * {{ goods_len }});
+                                    try {
+                                        $(counts).val(curr_prices['{{ good.id }}']['{{ market.id }}']);
+                                    } catch(e) {}
+                                    $(counts).change(function () {
+                                        var new_price = $(this).val();
+                                        if (new_price < 0)
+                                            $(this).css('background-color', 'red');
+                                        else {
+                                            $(this).removeAttr('style');
+                                            save_price("#_{{ count }} #id_price", new_price, '{{ market.id }}', '{{ good.id }}');
+                                        }
+                                    });
+                                </script>
+                            {% endwith %}
+                        {% endfor %}
+                        <td class="new detailed" onclick="details('{{ good.id }}')"></td>
+                        <script>
+                            g = {{ good.id }};
+                            price_change(fp[g][1], fp[g][0], lp[g][1], lp[g][0], weights[g], g);
+                        </script>
+                    </tr>
+                    <tr class="old" id="r_{{ good.id }}" hidden>
+                    {% for market in markets %}
+                        <td id="m_{{ market.id }}"></td>
+                        <script>
+                        try {
+                            $('tr#r_{{ good.id }} td#m_{{ market.id }}').text(old_prices['{{ good.id }}']['{{ market.id }}']);
+                        } catch(e) {}
+                        </script>
+                    {% endfor %}
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <script>
+        {% comment %} document.addEventListener('keydown', function (event) {
+            if (event.keyCode === 13 && event.target.nodeName === 'INPUT') {
+                event.preventDefault();
+                var input_id = event.target.parentNode.parentNode.id.replace('_','');
+                var next_id = parseInt(input_id) + 1;
+                try {
+                    document.querySelector('#_' + next_id + ' input').focus();
+                } catch(e) {
+                    document.querySelector('#_0 input').focus();
+                }
+            }
+        }); {% endcomment %}
+        function save_price(el_id, price, marketId, goodId, is_failed, curr_time) {
+            try {
+                var arr = lp[goodId][is_market[marketId]];
+                arr[market_indices[marketId]] = price!=0 ? Number(price) : null
+                price_change(fp[goodId][1], fp[goodId][0], lp[goodId][1], lp[goodId][0], weights[goodId], goodId);
+            } catch(e) {
+                console.log("Cannot calculate change for: " + goodId);
+            }
+
+            is_failed = is_failed || false
+            var context = {
+                    'price': price,
+                    'marketId': marketId,
+                    'goodId': goodId,
+                    'regionId': '{{ regionId }}',
+                    'sunday': '{{ sunday }}',
+                    'csrfmiddlewaretoken': '{{ csrf_token }}',
+                }
+            if (is_failed) 
+                context['time'] = curr_time.getTime() / 1000;
+            $.ajax({
+                type: 'POST',
+                url: 'save_price',
+                data: context,
+                success: function (data) {
+                    if (is_failed) {
+                        var fails = $("#fails");
+                        var num_fail = fails.text();
+                        fails.text(--num_fail);
+                        $(el_id).removeAttr('style');
+                        if (num_fail == 0) 
+                            $("#unsaved").hide();
+                    }
+                },
+                error: function(xhr, status, error){
+                    if (xhr.status == 0) {
+                        var fails = $("#fails");
+                        var num_fail = fails.text();
+                        fails.text(++num_fail);
+                        $(el_id).css('background-color', 'yellow');
+                        $("#unsaved").show();
+                        var curr_time = new Date();
+                        window.addEventListener("online", 
+                            function() { save_price(el_id, price, marketId, goodId, true, curr_time); }, 
+                            { once: true });
+                    } else {
+                        alert('Хатолик содир бўлди. Админга мурожаат қилинг! ' + xhr.status)
+                    }
+                }
+            });
+        };
+        function show_title(el) {
+            var $title = $(el).find(".title");
+            if (!$title.length) {
+                $(el).append('<span class="title">' + $(el).attr("title") + '</span>');
+            } else {
+                $title.remove();
+            }
+        };
+        function details(good_id) {
+            var row = '#r_' + good_id;
+            var parent_row = 'tr#n_' + good_id + ' .new';
+            if ($(row).is(":hidden")) {
+                $(parent_row).attr("rowspan", "2");
+                $(row).removeAttr("hidden");
+            } else {
+                $(parent_row).removeAttr("rowspan");
+                $(row).prop("hidden", !this.checked);
+            }
+        }
+
+        $("[tabindex]").addClass("TabOnEnter");
+        $(document).on("keypress", ".TabOnEnter", function (e) {
+        //Only do something when the user presses Enter
+            if (e.keyCode == 13) {
+                var nextElement = $('[tabindex="' + (this.tabIndex + 1) + '"]');
+                if (nextElement.length)
+                    nextElement.focus()
+                else
+                    $('[tabindex="1"]').focus();
+            }
+        });
+    </script>
+    </main>
+{% endblock %}

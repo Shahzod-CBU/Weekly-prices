@@ -1,0 +1,17 @@
+{% extends 'admin/base.html' %}
+
+{% block content %}
+    <p><b>Устунлари қуйидагидек номланган жавдалда маълумотларни киритинг (устанлар кетма-кетлиги аҳамиятга эга эмас):</b></p>
+    <p><b>{{ field_name }}</b></p>
+    <br />
+    <div>
+        <form action="." method="POST" enctype="multipart/form-data">
+            <input type="hidden" name="name" value="test">
+            {{ form.as_p }}
+            {% csrf_token %}
+            <button type="submit">Upload</button>
+        </form>
+    </div>
+    <br />
+
+{% endblock %}

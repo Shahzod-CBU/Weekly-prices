@@ -1,0 +1,110 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block prices_table %}
+<style>
+    td{
+        text-align: center;
+        vertical-align: middle !important;
+    }
+</style>
+<main class="container">
+    <div style="margin-right: auto; margin-left: auto;">
+        <div class="btn-group btn-group-toggle" data-toggle="buttons" style="margin-top: 15px;">
+            <label class="btn btn-info">
+                <input type="radio" autocomplete="off" onclick="window.location=`{% url 'index' %}`;"> Республика
+            </label>
+            <label class="btn btn-info active">
+                <input type="radio" autocomplete="off" checked> 
+                Ҳудудлар
+            </label>
+            <label class="btn btn-info">
+                <input type="radio" autocomplete="off" onclick="window.location=`{% url 'changes' %}`;"> 
+                Ўзгаришлар
+            </label>
+        </div>
+    </div>
+
+    <div style="margin-top: 15px; font-weight: bold;">
+        <div style="float:left">
+            <span style="font-size: 20px;margin-bottom: 15px;" class='inline-block-child'>
+                Ҳудудлар бўйича нархлар
+            </span>
+            <span class='inline-block-child'>
+                <form enctype="multipart/form-data", action="/prices/export_by_region/", method="post">
+                    {% csrf_token %}
+                    <input id="date", type="hidden", name="sana", value="{{ sunday }}">
+                    <input id="region_id", type="hidden", name="region_id", value=0>
+                    <input type="image" name="submit" id='download_icon' src="{% static 'prices/download.svg' %}" alt="Submit">
+                </form> 
+            </span>
+        </div>
+        <span style="float:right;font-size: 17px;margin-bottom: 15px;">
+            <div class='inline-block-child'>
+                <img class='ajaxProgress' src="{% static 'prices/ajax-loader.gif' %}">
+            </div>
+            <select class='inline-block-child' id="regions_choice">
+                <option value=0>Ҳаммаси</option>
+                {% for region in regions %}
+                    <option value={{ region.id }}>{{ region.name }}</option>
+                {% endfor %}
+            </select>
+            <select class='inline-block-child' id="dates_choice">
+                {% for date, date_str in sana %}
+                    <option value="{{ date }}">{{ date_str }}</option>
+                {% endfor %}
+            </select>
+        </span>
+    </div>
+
+    {{ table|safe }}
+    <script>
+        $("#regions_choice").change(function() {
+            var region = $(this).val();
+            $('select').prop("disabled", true);
+            $('.ajaxProgress').show();
+            $.ajax({
+                url: 'by_regions_update/',
+                data: {
+                    'date': $("#dates_choice").val(),
+                    'region': region
+                },
+                success: function (resp) {
+                    $("table").html(resp);
+                    $('.ajaxProgress').hide();
+                    $('select').prop("disabled", false);
+                    $("#region_id").val(region);
+                },
+                error: function(xhr, status, error) {
+                    alert(xhr.status + " Request failed!");
+                    $('.ajaxProgress').hide();
+                    $("select").prop("disabled", false);
+                }
+            });
+        });
+        $("#dates_choice").change(function() {
+            var sana = $(this).val();
+            $('select').prop("disabled", true);
+            $('.ajaxProgress').show();
+            $.ajax({
+                url: 'by_regions_update/',
+                data: {
+                    'date': sana,
+                    'region': $("#regions_choice").val()
+                },
+                success: function (resp) {
+                    $("table").html(resp);
+                    $("#date").val(sana);
+                    $('.ajaxProgress').hide();
+                    $('select').prop("disabled", false);
+                },
+                error: function(xhr, status, error) {
+                    alert(xhr.status + " Request failed!");
+                    $('.ajaxProgress').hide();
+                    $("select").prop("disabled", false);
+                }
+            });
+        });
+    </script>
+</main>
+{% endblock %}

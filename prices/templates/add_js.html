@@ -1,0 +1,63 @@
+{% extends 'admin/change_list.html' %}
+
+{% block extrahead  %}
+    {{ block.super }}
+    <!-- <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js" integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj" crossorigin="anonymous"></script> -->
+    <script>
+        const $ = django.jQuery;
+        // ready(delay);
+        // function ready(delay) {
+        //     if (document.readyState != 'loading'){
+        //         delay();
+        //     } else {
+        //         document.addEventListener('DOMContentLoaded', delay);
+        //     }
+        // }
+        // function delay() {
+        //     setTimeout(fn, 1000);
+        // }
+        // function fn() {
+        //     var check_box = document.querySelector("input#id_form-0-show_default");
+        //     var input_date = document.querySelector("#id_form-0-date");
+        //     var calendar = document.querySelector("span.datetimeshortcuts");
+        //     var sunday = '{{ sunday }}';
+        //     if (check_box.checked === true) {
+        //         input_date.value = sunday;
+        //         input_date.setAttribute('disabled', 'disabled');
+        //         calendar.style.display = 'none';
+        //     }
+        //     check_box.addEventListener('change', function(e) {
+        //         if (event.target.checked === true) {
+        //             input_date.value = sunday;
+        //             // input_date.setAttribute('value', sunday);
+        //             input_date.setAttribute('disabled', 'disabled');
+        //             calendar.style.display = 'none';
+        //         } else {
+        //             input_date.removeAttribute('disabled');
+        //             calendar.style.display = '';
+        //         }
+        //     });
+        // }
+        $(window).on('load', function() {
+            var check_box = $("input#id_form-0-show_default");
+            var input_date = $("#id_form-0-date");
+            var sunday = '{{ sunday }}';
+            var calendar = $("span.datetimeshortcuts");
+            if (check_box.prop("checked") == true) {
+                input_date.attr('value', sunday);
+                input_date.attr('disabled', 'disabled');
+                calendar.hide();
+            }
+            check_box.change(function() {
+                if (this.checked) {
+                    input_date.attr('value', sunday);
+                    input_date.attr('disabled', 'disabled');
+                    calendar.hide();
+                } else {
+                    input_date.removeAttr('disabled');
+                    calendar.show();
+                }
+            });
+        });
+    </script>
+{% endblock %}
